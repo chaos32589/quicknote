@@ -6,14 +6,14 @@
 
 仓库 Settings → Pages → Source 选 GitHub Actions，然后在 Actions 运行 Deploy Quicknote to GitHub Pages。部署成功后以工作流给出的地址为准。
 
-Supabase Authentication → URL Configuration：将 Site URL 设置为部署地址，并加入 Redirect URLs。先注册自己的账号，再按需关闭新用户注册。
+无需真实邮箱或邮件验证。首次点击“首次设置”，输入用户名（3–24 位字母、数字或下划线）、至少 10 位密码和一次性初始化码。初始化码不在仓库中；它由服务端哈希验证，成功后失效。其他账号没有便签和图片使用权限。登录底层使用内部标识，不发送邮件。
 
 
 手机与电脑之间的私人文字、图片便签。静态网页 + Supabase Auth/Postgres/Storage，支持 GitHub Pages 子路径部署。
 
 ## 功能
 
-- 邮箱密码注册与登录；跨设备使用同一账号。
+- 用户名密码登录；一次性初始化码开通唯一私人账号。
 - 保存文字/链接和单张原图（JPG、PNG、WebP、GIF，最大 10 MB）。
 - 图片选择、拖拽、截图粘贴；文字复制；原图下载；兼容浏览器支持复制 PNG。
 - 每 10 秒同步，重新进入页面/网络恢复时同步；搜索全库文字；分页加载；删除。
@@ -23,7 +23,7 @@ Supabase Authentication → URL Configuration：将 Site URL 设置为部署地�
 ## 部署
 
 1. 当前项目已初始化，请勿重复执行 setup.sql。仅迁移至新项目时运行一次。
-2. Auth 开启 Email provider。配置 Site URL 为部署后的网页地址，保持邮箱确认打开。
+2. 保留 Auth Email/password provider 供内部标识登录，私人账号由 initialize-owner 函数自动确认。
 3. 将源码放入 GitHub 仓库 main 分支。
 4. 已提供默认配置。若迁移项目，可修改 supabase.config.json，或用以下 Variables 覆盖：
    - `SUPABASE_URL`：项目 URL。
@@ -65,3 +65,7 @@ python3 -m http.server 8080 --directory dist
 ## 当前验证状态
 
 源码语法与打包需通过；Supabase 项目和 GitHub 仓库归属确认前，不会更改现有项目。真实账号登录、RLS 双账号隔离、跨端同步及 GitHub Pages 部署需要配置后完成验收。
+
+## 私人模式
+
+initialize-owner 使用一次性高熵初始化码验证身份，因此不要求现有登录 JWT。只能创建一个带服务端 quicknote_owner 标记的账号；RLS 对便签和图片强制检查该标记。quicknote_bootstrap 对浏览器完全不可访问。Supabase 原始 signup 接口即使仍开放，其账号也不能使用本应用数据或图片存储。不要把初始化码或 service_role 放入仓库。
