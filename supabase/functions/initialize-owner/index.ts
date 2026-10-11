@@ -1,8 +1,11 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.117.3';
-const headers={'Access-Control-Allow-Origin':'https://chaos32589.github.io','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS','Content-Type':'application/json','Cache-Control':'no-store'};
-const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers});
+const baseHeaders={'Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type','Access-Control-Allow-Methods':'POST, OPTIONS','Content-Type':'application/json','Cache-Control':'no-store'};
 const hex=(buffer:ArrayBuffer)=>Array.from(new Uint8Array(buffer),b=>b.toString(16).padStart(2,'0')).join('');
 Deno.serve(async(req:Request)=>{
+ const origin=req.headers.get('origin')||'';
+ const allowed=['https://chaos32589.github.io','https://xzc.app','https://www.xzc.app'];
+ const headers={...baseHeaders,'Access-Control-Allow-Origin':allowed.includes(origin)?origin:'https://xzc.app','Vary':'Origin'};
+ const reply=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers});
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(req.method!=='POST')return reply({error:'仅支持 POST'},405);
  try{
