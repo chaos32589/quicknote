@@ -1,0 +1,26 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const elements=new Map();
+function element(){return {value:'',style:{},children:[],attributes:{},classList:{add(){},toggle(){}},setAttribute(k,v){this.attributes[k]=v},append(...xs){this.children.push(...xs)},replaceChildren(...xs){this.children=xs},querySelectorAll(){return []}}}
+const calls=[];
+let result=[],failure=null;
+const builder={select(...x){calls.push(['select',...x]);return this},order(...x){calls.push(['order',...x]);return this},eq(...x){calls.push(['eq',...x]);return this},ilike(...x){calls.push(['ilike',...x]);return this},update(x){calls.push(['update',x]);return this},async single(){return {data:{id:'a'},error:failure}},async range(...x){calls.push(['range',...x]);return {data:result,error:null}}};
+const context=vm.createContext({SUPABASE_URL:'',SUPABASE_KEY:'',document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement:element,createTextNode:x=>x,addEventListener(){}},window:{addEventListener(){}},IntersectionObserver:class{disconnect(){} observe(){}},setTimeout:()=>0,clearTimeout(){},console});
+vm.runInContext(readFileSync('src/app.js','utf8').replace(/^import .*?;\n/,''),context);
+context.fakeClient={from:()=>builder};
+vm.runInContext("client=fakeClient;user={id:'owner'}",context);
+await vm.runInContext('refresh()',context);
+assert.equal(calls.find(x=>x[0]==='order')[1],'is_pinned');
+calls.length=0;
+await vm.runInContext('switchView(true)',context);
+assert.ok(calls.some(x=>x[0]==='eq'&&x[1]==='is_favorite'&&x[2]===true));
+assert.equal(elements.get('favoriteNotes').attributes['aria-pressed'],'true');
+assert.match(elements.get('records').children[0].textContent,/还没有收藏/);
+calls.length=0;
+await vm.runInContext("flagButton({id:'a',is_favorite:false},'is_favorite','favorite','收藏').onclick()",context);
+assert.equal(calls.find(x=>x[0]==='update')[1].is_favorite,true);
+failure={message:'denied'};
+await vm.runInContext("flagButton({id:'a',is_pinned:true},'is_pinned','pin','置顶').onclick()",context);
+assert.equal(elements.get('toast').textContent,'denied');
+console.log('Favorites filter, pinned ordering, flag updates and failure feedback passed');
