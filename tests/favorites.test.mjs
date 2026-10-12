@@ -6,8 +6,8 @@ function element(){return {value:'',style:{},children:[],attributes:{},classList
 const calls=[];
 let result=[],failure=null;
 const builder={select(...x){calls.push(['select',...x]);return this},order(...x){calls.push(['order',...x]);return this},eq(...x){calls.push(['eq',...x]);return this},ilike(...x){calls.push(['ilike',...x]);return this},update(x){calls.push(['update',x]);return this},async single(){return {data:{id:'a'},error:failure}},async range(...x){calls.push(['range',...x]);return {data:result,error:null}}};
-const context=vm.createContext({SUPABASE_URL:'',SUPABASE_KEY:'',document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement:element,createTextNode:x=>x,addEventListener(){}},window:{addEventListener(){}},IntersectionObserver:class{disconnect(){} observe(){}},setTimeout:()=>0,clearTimeout(){},console});
-vm.runInContext(readFileSync('src/app.js','utf8').replace(/^import .*?;\n/,''),context);
+const context=vm.createContext({createImageViewer:()=>({close(){},open(){}}),SUPABASE_URL:'',SUPABASE_KEY:'',document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement:element,createTextNode:x=>x,addEventListener(){}},window:{addEventListener(){}},IntersectionObserver:class{disconnect(){} observe(){}},setTimeout:()=>0,clearTimeout(){},console});
+vm.runInContext(readFileSync('src/app.js','utf8').replace(/^import .*?;\n/gm,''),context);
 context.fakeClient={from:()=>builder};
 vm.runInContext("client=fakeClient;user={id:'owner'}",context);
 await vm.runInContext('refresh()',context);
