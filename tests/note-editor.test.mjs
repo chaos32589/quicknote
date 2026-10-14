@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {createNoteEditor} from '../src/note-editor.js';
+globalThis.document={createElement:()=>({children:[],append(...items){this.children.push(...items)},setAttribute(){},focus(){},remove(){this.removed=true}})};
+let saved=[],closed=0,fail=false;
+const editor=createNoteEditor({content:'old'},async text=>{if(fail)throw new Error('network error');saved.push(text)},()=>closed++);
+const [input,,message,buttons]=editor.element.children;
+input.value='new';assert.equal(editor.isDirty(),true);
+await editor.element.onsubmit({preventDefault(){}});assert.deepEqual(saved,['new']);assert.equal(closed,1);
+input.value=' ';await editor.element.onsubmit({preventDefault(){}});assert.match(message.textContent,/不能为空/);assert.equal(saved.length,1);
+input.value='keep draft';fail=true;await editor.element.onsubmit({preventDefault(){}});assert.equal(input.value,'keep draft');assert.equal(message.textContent,'network error');assert.equal(buttons.children[1].disabled,false);
+buttons.children[0].onclick();assert.equal(closed,2);
+const photo=createNoteEditor({content:'caption',image_path:'original'},async text=>saved.push(text),()=>{});photo.element.children[0].value='';await photo.element.onsubmit({preventDefault(){}});assert.equal(saved.at(-1),'');
+editor.destroy();assert.equal(input.value,'');assert.equal(editor.element.removed,true);
+console.log('Editing: save, cancel, empty validation, attached-image caption, error recovery and lock cleanup passed');
