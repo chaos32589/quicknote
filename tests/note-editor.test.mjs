@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {createNoteEditor} from '../src/note-editor.js';
-globalThis.document={createElement:()=>({children:[],append(...items){this.children.push(...items)},setAttribute(){},focus(){},remove(){this.removed=true}})};
+globalThis.document={createElement:()=>({children:[],append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items},setAttribute(){},focus(){},remove(){this.removed=true}})};
 let saved=[],closed=0,fail=false;
 const editor=createNoteEditor({content:'old'},async text=>{if(fail)throw new Error('network error');saved.push(text)},()=>closed++);
-const [input,,message,buttons]=editor.element.children;
+const [input,,message]=editor.element.children;const buttons=editor.element.children.find(x=>x.className==='actions');
 input.value='new';assert.equal(editor.isDirty(),true);
 await editor.element.onsubmit({preventDefault(){}});assert.deepEqual(saved,['new']);assert.equal(closed,1);
 input.value=' ';await editor.element.onsubmit({preventDefault(){}});assert.match(message.textContent,/不能为空/);assert.equal(saved.length,1);

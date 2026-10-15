@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {photoList,photoPaths,createPhotoPicker,uploadPhotos} from '../src/photos.js';
+globalThis.document={createElement:()=>({children:[],append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items},setAttribute(){}})};
+const legacy={image_path:'owner/note',image_name:'old.jpg',thumbnail_path:'owner/note-preview'};
+assert.equal(photoList(legacy).length,1);assert.equal(photoList({...legacy,images:[]}).length,0);
+const original=photoList(legacy),errors=[];const picker=createPhotoPicker(original,async()=>'',s=>errors.push(s));
+const photo=new File(['photo'],'photo.jpg',{type:'image/jpeg'});
+picker.add([photo,photo]);assert.equal(picker.items.length,3);
+picker.element.children[0].children[1].onclick();assert.equal(picker.items.length,2);assert.equal(original.length,1);
+picker.setDisabled(true);picker.add([photo]);assert.equal(picker.items.length,2);picker.setDisabled(false);
+picker.add(Array(25).fill(photo));assert.equal(picker.items.length,20);assert.match(errors.at(-1),/20/);
+picker.clear();assert.equal(picker.items.length,0);
+const uploads=[],removed=[];let fail=false;
+const client={storage:{from:()=>({async upload(path){uploads.push(path);return {error:fail&&path.endsWith('-preview')?new Error('upload failed'):null}},async remove(paths){removed.push(...paths);return {error:null}}})}};
+let result=await uploadPhotos(client,'owner','note',[legacy,{file:photo},{file:photo}],async()=>new Blob(['thumb'],{type:'image/webp'}));
+assert.equal(result.images.length,3);assert.equal(result.uploaded.length,4);assert.equal(new Set(result.uploaded).size,4);assert.equal(photoPaths(result.images).length,6);
+fail=true;await assert.rejects(uploadPhotos(client,'owner','note',[{file:photo}],async()=>new Blob(['thumb'])),/upload failed/);assert.equal(removed.length,1);
+console.log('Photos: legacy compatibility, multi-select, remove, limits, unique uploads and partial-upload cleanup passed');
