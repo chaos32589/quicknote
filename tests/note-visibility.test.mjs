@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {visibilityButton} from '../src/note-visibility.js';
+globalThis.document={createElement:()=>({attributes:{},setAttribute(k,v){this.attributes[k]=v}})};
+const card=()=>({classes:new Set(),get classList(){return {toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name)}}});
+let server={id:'a',is_hidden:false},finish,requests=0,errorMessage='';
+const a=card();const toggle=visibilityButton(server,a,async hidden=>{requests++;await new Promise(r=>finish=r);server={...server,is_hidden:hidden}},e=>errorMessage=e.message);
+assert.equal(a.classes.has('is-concealed'),false);
+const pending=toggle.onclick();assert.equal(toggle.disabled,true);await toggle.onclick();assert.equal(requests,1);
+finish();await pending;assert.equal(server.is_hidden,true);assert.equal(a.classes.has('is-concealed'),true);
+const deviceB=card();const remote=visibilityButton(server,deviceB,async hidden=>{server={...server,is_hidden:hidden}});
+assert.equal(deviceB.classes.has('is-concealed'),true);await remote.onclick();assert.equal(server.is_hidden,false);
+const fresh=card();visibilityButton(server,fresh,async()=>{});assert.equal(fresh.classes.has('is-concealed'),false);
+const failed=card();const fail=visibilityButton(server,failed,async()=>{throw new Error('offline')},e=>errorMessage=e.message);
+await fail.onclick();assert.equal(failed.classes.has('is-concealed'),false);assert.equal(errorMessage,'offline');assert.equal(fail.disabled,false);
+console.log('Visibility: persisted toggle, second-device reload, duplicate guard and failed-save recovery passed');
