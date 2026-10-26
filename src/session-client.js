@@ -1,4 +1,5 @@
 import {createClient} from '@supabase/supabase-js';
+import {fetchWithTimeout} from './fetch-timeout.js';
 
 // Seed only the complete session returned by our successful server-side PIN check.
 // This storage lives in this client instance; no tokens survive reload or locking.
@@ -8,7 +9,7 @@ export function createSessionClient(url,key,session,fetcher=globalThis.fetch.bin
  const memory=new Map([[storageKey,JSON.stringify(session)]]);
  const storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>{memory.set(k,v)},removeItem:k=>{memory.delete(k)}};
  return createClient(url,key,{auth:{storageKey,storage,persistSession:true,detectSessionInUrl:false},global:{fetch:(input,init={})=>{
-  if(String(input).includes('/auth/v1/'))return fetcher(input,{...init,signal:AbortSignal.any([...(init.signal?[init.signal]:[]),AbortSignal.timeout(10000)])});
+  if(String(input).includes('/auth/v1/'))return fetchWithTimeout(input,init,10000,fetcher);
   return fetcher(input,init);
  }}});
 }

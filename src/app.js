@@ -1,3 +1,4 @@
+import {fetchWithTimeout} from './fetch-timeout.js';
 import {createSessionClient} from './session-client.js';
 import {createImageViewer} from './image-viewer.js';
 import {createNoteEditor} from './note-editor.js';
@@ -96,7 +97,7 @@ $('composer').onsubmit=async e=>{
 let searchTimer;$('search').oninput=()=>{if(activeEditor){$('search').value=query;toast('请先保存或取消编辑');return}clearTimeout(searchTimer);searchTimer=setTimeout(async()=>{while(loading)await new Promise(r=>setTimeout(r,100));query=$('search').value.trim();offset=0;await refresh()},300)};$('allNotes').onclick=()=>switchView(false);$('favoriteNotes').onclick=()=>switchView(true);$('more').onclick=()=>refresh(true);$('refresh').onclick=()=>refresh();
 if(!url||!key){$('setup').hidden=false;status('等待配置')}else{$('auth').hidden=false;
 let needsSetup=false;
-async function pinRequest(body){const response=await fetch(url+'/functions/v1/initialize-owner',{signal:AbortSignal.timeout(20000),method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw new Error(result.error||'连接失败，请重试');return result}
+async function pinRequest(body){const response=await fetchWithTimeout(url+'/functions/v1/initialize-owner',{method:'POST',headers:{'Content-Type':'application/json',apikey:key},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw new Error(result.error||'连接失败，请重试');return result}
 async function checkSetup(){try{const state=await pinRequest({action:'status'});needsSetup=!state.initialized;$('initialSetup').hidden=!needsSetup;$('authTitle').textContent=needsSetup?'设置你的访问码':'输入访问码';$('authHint').textContent=needsSetup?'只需设置一次，之后在所有设备通用。':'请输入 6 位数字访问码。';if(!loginPending)$('unlock').textContent=needsSetup?'设置并打开随记 ↗':'打开随记 ↗'}catch(e){$('authMessage').textContent=errorMessage(e)}}
 const setupReady=checkSetup();
 function paintPin(){const n=$('pin').value.length;document.querySelectorAll('.pin-cells>span').forEach((cell,i)=>{cell.textContent=i<n?'•':'';cell.classList.toggle('active',i===Math.min(n,5))})}

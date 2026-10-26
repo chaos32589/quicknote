@@ -1,11 +1,13 @@
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {fetchWithTimeout} from '../src/fetch-timeout.js';
 const elements=new Map();
 function element(){const classes=new Set();return {value:'',style:{},children:[],attributes:{},classList:{add:x=>classes.add(x),remove:x=>classes.delete(x),contains:x=>classes.has(x),toggle(){}},setAttribute(k,v){this.attributes[k]=v},append(...xs){this.children.push(...xs)},replaceChildren(...xs){this.children=xs},querySelectorAll(){return []}}}
 let resolveLogin,resolveLogout,requests=0,fail=false;
 const client={auth:{onAuthStateChange(){},signOut:()=>new Promise(r=>resolveLogout=r),dispose:async()=>{},getSession:async()=>({data:{session:null}}),setSession:async()=>({data:{session:{user:{id:'owner'}}},error:null})},from(){return {select(){return this},order(){return this},range:async()=>({data:[],error:null})}}};
 const context=vm.createContext({photoList:row=>row.images||[],createPhotoPicker:()=>({element:{},items:[],clear(){},setDisabled(){}}),createImageViewer:()=>({close(){},open(){}}),SUPABASE_URL:'https://test.supabase.co',SUPABASE_KEY:'public',createSessionClient:()=>client,AbortSignal,document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id)},createElement:element,querySelectorAll:()=>[],addEventListener(){}},window:{addEventListener(){}},IntersectionObserver:class{disconnect(){} observe(){}},setTimeout:()=>0,setInterval(){},clearTimeout(){},fetch:async(_url,options)=>{const body=JSON.parse(options.body);if(body.action==='status')return {ok:true,json:async()=>({initialized:true})};requests++;await new Promise(r=>resolveLogin=r);return {ok:!fail,json:async()=>fail?{error:'访问码不正确'}:{session:{access_token:'a',refresh_token:'r',user:{id:'owner'}}}}}});
+context.fetchWithTimeout=(input,init)=>fetchWithTimeout(input,init,20000,context.fetch);
 vm.runInContext(readFileSync('src/app.js','utf8').replace(/^import .*?;\n/gm,''),context);
 await new Promise(r=>setImmediate(r));
 elements.get('pin').value='123456';
